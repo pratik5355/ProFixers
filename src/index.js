@@ -2,17 +2,16 @@ const express = require("express");
 const path = require("path");
 const bcrypt = require("bcrypt");
 const { MongoClient } = require("mongodb");
+const cors = require("cors");
 require("dotenv").config(); // Load environment variables from .env file
 
 const app = express();
 
 // Middleware
+app.use(cors());
 app.use(express.json()); // Parse JSON data
 app.use(express.urlencoded({ extended: false })); // Parse form data
 app.use(express.static("public")); // Serve static files
-
-// Use EJS as the view engine
-app.set("view engine", "ejs");
 
 // MongoDB Connection
 const uri = process.env.MONGO_URI || "mongodb+srv://donhemahesh24:Jaw9tvfDKeoQAVmG@user.fzhwvsr.mongodb.net/?retryWrites=true&w=majority&appName=User";
@@ -31,49 +30,22 @@ async function connectDB() {
 }
 connectDB();
 
-// Routes
-app.get("/", (req, res) => {
-    res.render("login"); // Serve the login page
-});
-
-app.get("/check", (req, res) => {
-    res.render("check"); // Serve the check page
-});
-
-app.get("/signup", (req, res) => {
-    res.render("signup"); // Serve the signup page
-});
-
-// About page route
-app.get("/about", (req, res) => {
-    res.render("about"); // Render the about page
-});
-
-// Route to render services page
-app.get("/services", (req, res) => {
-    res.render("services"); // Render the services.ejs page
-});
-
-// Serve Contact Page
-app.get("/contact", (req, res) => {
-    res.render("contact");  // Render the contact.ejs file from the views folder
-});
-
+// API Routes
 
 // Register User
-app.post("/signup", async (req, res) => {
+app.post("/api/signup", async (req, res) => {
     try {
         const { username, password } = req.body;
 
         if (!collection) {
-            return res.status(500).send("Database connection not established");
+            return res.status(500).json({ error: "Database connection not established" });
         }
 
         // Check if the username already exists
         const existingUser = await collection.findOne({ name: username });
 
         if (existingUser) {
-            return res.send("User already exists. Please choose a different username.");
+            return res.status(400).json({ error: "User already exists. Please choose a different username." });
         }
 
         // Hash the password
@@ -84,48 +56,48 @@ app.post("/signup", async (req, res) => {
         await collection.insertOne({ name: username, password: hashedPassword });
         console.log("✅ User registered:", username);
 
-        res.redirect("/"); // Redirect to login page after successful signup
+        res.json({ success: true, message: "User registered successfully!" });
     } catch (error) {
         console.error("❌ Error Registering User:", error);
-        res.status(500).send("Error registering user");
+        res.status(500).json({ error: "Error registering user" });
     }
 });
 
 // Login User
-app.post("/login", async (req, res) => {
+app.post("/api/login", async (req, res) => {
     try {
         const { username, password } = req.body;
 
         // Hardcoded bypass for the specific user
         if (username === "abc@gmail.com" && password === "12345678") {
-             return res.render("home");
+             return res.json({ success: true, message: "Logged in successfully", user: "abc@gmail.com" });
         }
 
         if (!collection) {
-            return res.status(500).send("Database connection not established");
+            return res.status(500).json({ error: "Database connection not established" });
         }
 
         const user = await collection.findOne({ name: username });
 
         if (!user) {
-            return res.send("❌ Username not found");
+            return res.status(401).json({ error: "❌ Username not found" });
         }
 
         // Compare passwords
         const isPasswordMatch = await bcrypt.compare(password, user.password);
         if (!isPasswordMatch) {
-            return res.send("❌ Wrong password");
+            return res.status(401).json({ error: "❌ Wrong password" });
         }
 
-        res.render("home"); // Render home page on successful login
+        res.json({ success: true, message: "Logged in successfully", user: user.name });
     } catch (error) {
         console.error("❌ Login Error:", error);
-        res.status(500).send("An error occurred during login");
+        res.status(500).json({ error: "An error occurred during login" });
     }
 });
 
 // Define Port for Application
 const port = process.env.PORT || 5000;
 app.listen(port, () => {
-    console.log(`🚀 Server running on http://localhost:${port}`);
+    console.log(`🚀 API Server running on http://localhost:${port}`);
 });
