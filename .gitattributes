@@ -1,0 +1,3 @@
+# Balance GitHub language stats by ignoring framework/vendor assets
+public/assets/** linguist-vendored
+frontend/public/assets/** linguist-vendored
